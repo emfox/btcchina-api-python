@@ -6,14 +6,14 @@ import re
 import hmac
 import hashlib
 import base64
-import httplib
+import http.client
 import json
  
 class BTCChina():
     def __init__(self,access=None,secret=None):
         self.access_key=access
         self.secret_key=secret
-        self.conn=httplib.HTTPSConnection("api.btcchina.com")
+        self.conn=http.client.HTTPSConnection("api.btcchina.com")
  
     def _get_tonce(self):
         return int(time.time()*1000000)
@@ -40,7 +40,7 @@ class BTCChina():
         pstring=pstring.strip('&')
  
         # now with correctly ordered param string, calculate hash
-        phash = hmac.new(self.secret_key, pstring, hashlib.sha1).hexdigest()
+        phash = hmac.new(self.secret_key.encode('ascii'), pstring.encode('ascii'), hashlib.sha1).hexdigest()
         return phash
  
     def _private_request(self,post_data):
@@ -57,7 +57,7 @@ class BTCChina():
         pd_hash=self._get_params_hash(post_data)
  
         # must use b64 encode        
-        auth_string='Basic '+base64.b64encode(self.access_key+':'+pd_hash)
+        auth_string='Basic '+base64.b64encode((self.access_key+':'+pd_hash).encode('ascii')).decode('ascii')
         headers={'Authorization':auth_string,'Json-Rpc-Tonce':tonce}
  
         #post_data dictionary passed as JSON        
@@ -68,7 +68,7 @@ class BTCChina():
         # before passing a dict of results
         if response.status == 200:
             # this might fail if non-json data is returned
-            resp_dict = json.loads(response.read())
+            resp_dict = json.loads(response.read().decode())
  
             # The id's may need to be used by the calling application,
             # but for now, check and discard from the return dict
@@ -79,8 +79,8 @@ class BTCChina():
                     return resp_dict['error']
         else:
             # not great error handling....
-            print "status:",response.status
-            print "reason:",response.reason
+            print("status:",response.status)
+            print("reason:",response.reason)
  
         return None
  
